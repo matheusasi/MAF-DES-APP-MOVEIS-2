@@ -1,5 +1,6 @@
 package com.exemplo.tarefasapp.telas
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,12 +25,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,13 +41,37 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.exemplo.tarefasapp.componentes.BottomBar
-import com.exemplo.tarefasapp.dados.AppDados
+import com.exemplo.tarefasapp.dados.AppDatabase
+import com.exemplo.tarefasapp.dados.Categoria
 import com.exemplo.tarefasapp.dados.Tarefa
 import com.exemplo.tarefasapp.navegacao.Rotas
 import com.exemplo.tarefasapp.ui.theme.TarefasAppTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListaTarefasScreen(navController: NavController) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getInstance(context) }
+
+    var tarefas by remember { mutableStateOf(listOf<Tarefa>()) }
+    var categorias by remember { mutableStateOf(listOf<Categoria>()) }
+
+    suspend fun carregar() {
+        try {
+            tarefas = db.tarefaDao().buscarTodos()
+            categorias = db.categoriaDao().buscarTodos()
+        } catch (e: Exception) {
+            Log.e("ListaTarefas", "Erro ao buscar dados do banco", e)
+        }
+    }
+
+    // Busca no banco assim que a tela abre
+    LaunchedEffect(Unit) {
+        carregar()
+    }
+
     Scaffold(
         bottomBar = { BottomBar(navController, Rotas.LISTA_TAREFAS) }
     ) { innerPadding ->
@@ -61,15 +89,48 @@ fun ListaTarefasScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            FormularioNovaTarefa()
+            FormularioNovaTarefa(
+                categorias = categorias,
+                onAdicionar = { novaTarefa ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            db.tarefaDao().inserir(novaTarefa)
+                            carregar()
+                        } catch (e: Exception) {
+                            Log.e("ListaTarefas", "Erro ao inserir tarefa", e)
+                        }
+                    }
+                }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyColumn {
-                items(AppDados.tarefas) { tarefa ->
+                items(tarefas) { tarefa ->
                     CardTarefa(
                         tarefa = tarefa,
-                        onClickCard = { navController.navigate(Rotas.detalheTarefa(tarefa.id)) }
+                        categoria = categorias.find { it.id == tarefa.categoriaId },
+                        onClickCard = { navController.navigate(Rotas.detalheTarefa(tarefa.id)) },
+                        onAlternarConcluida = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    db.tarefaDao().atualizar(tarefa.copy(concluida = !tarefa.concluida))
+                                    carregar()
+                                } catch (e: Exception) {
+                                    Log.e("ListaTarefas", "Erro ao atualizar tarefa", e)
+                                }
+                            }
+                        },
+                        onRemover = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    db.tarefaDao().deletar(tarefa)
+                                    carregar()
+                                } catch (e: Exception) {
+                                    Log.e("ListaTarefas", "Erro ao deletar tarefa", e)
+                                }
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -79,18 +140,21 @@ fun ListaTarefasScreen(navController: NavController) {
 }
 
 @Composable
-private fun FormularioNovaTarefa() {
+private fun FormularioNovaTarefa(categorias: List<Categoria>, onAdicionar: (Tarefa) -> Unit) {
     var titulo by remember { mutableStateOf("") }
-    var categoriaSelecionadaId by remember { mutableStateOf(AppDados.categorias.first().id) }
+    var categoriaEscolhidaId by remember { mutableStateOf<Int?>(null) }
+
+    // Enquanto nada foi escolhido, usa a primeira categoria do banco
+    val categoriaSelecionadaId = categoriaEscolhidaId ?: categorias.firstOrNull()?.id
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        AppDados.categorias.forEach { categoria ->
+        categorias.forEach { categoria ->
             Button(
-                onClick = { categoriaSelecionadaId = categoria.id },
+                onClick = { categoriaEscolhidaId = categoria.id },
                 colors = if (categoriaSelecionadaId == categoria.id) {
-                    ButtonDefaults.buttonColors(containerColor = categoria.cor)
+                    ButtonDefaults.buttonColors(containerColor = Color(categoria.cor))
                 } else {
                     ButtonDefaults.buttonColors()
                 }
@@ -111,10 +175,9 @@ private fun FormularioNovaTarefa() {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Button(onClick = {
-            if (titulo.isNotBlank()) {
-                AppDados.tarefas.add(
+            if (titulo.isNotBlank() && categoriaSelecionadaId != null) {
+                onAdicionar(
                     Tarefa(
-                        id = AppDados.proximoIdTarefa(),
                         titulo = titulo,
                         descricao = "Tarefa criada pelo app",
                         categoriaId = categoriaSelecionadaId,
@@ -131,9 +194,13 @@ private fun FormularioNovaTarefa() {
 }
 
 @Composable
-private fun CardTarefa(tarefa: Tarefa, onClickCard: () -> Unit) {
-    val categoria = AppDados.buscarCategoria(tarefa.categoriaId)
-
+private fun CardTarefa(
+    tarefa: Tarefa,
+    categoria: Categoria?,
+    onClickCard: () -> Unit,
+    onAlternarConcluida: () -> Unit,
+    onRemover: () -> Unit
+) {
     Card(
         onClick = onClickCard,
         modifier = Modifier.fillMaxWidth()
@@ -144,7 +211,7 @@ private fun CardTarefa(tarefa: Tarefa, onClickCard: () -> Unit) {
         ) {
             Checkbox(
                 checked = tarefa.concluida,
-                onCheckedChange = { AppDados.alternarConcluida(tarefa.id) }
+                onCheckedChange = { onAlternarConcluida() }
             )
 
             Column(
@@ -160,12 +227,12 @@ private fun CardTarefa(tarefa: Tarefa, onClickCard: () -> Unit) {
                     Text(
                         text = categoria.nome,
                         style = MaterialTheme.typography.bodySmall,
-                        color = categoria.cor
+                        color = Color(categoria.cor)
                     )
                 }
             }
 
-            IconButton(onClick = { AppDados.tarefas.remove(tarefa) }) {
+            IconButton(onClick = onRemover) {
                 Icon(Icons.Default.Delete, contentDescription = "Remover tarefa")
             }
         }

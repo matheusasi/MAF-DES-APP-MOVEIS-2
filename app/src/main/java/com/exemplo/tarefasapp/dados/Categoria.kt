@@ -1,9 +1,11 @@
 package com.exemplo.tarefasapp.dados
 
-import androidx.compose.ui.graphics.Color
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
+@Entity(tableName = "categorias")
 data class Categoria(
-    val id: Int,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val nome: String,
-    val cor: Color
+    val cor: Long
 )

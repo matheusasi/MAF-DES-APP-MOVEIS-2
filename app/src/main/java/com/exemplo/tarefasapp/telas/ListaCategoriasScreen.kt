@@ -1,5 +1,6 @@
 package com.exemplo.tarefasapp.telas
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,27 +35,53 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.exemplo.tarefasapp.componentes.BottomBar
-import com.exemplo.tarefasapp.dados.AppDados
+import com.exemplo.tarefasapp.dados.AppDatabase
 import com.exemplo.tarefasapp.dados.Categoria
+import com.exemplo.tarefasapp.dados.Tarefa
 import com.exemplo.tarefasapp.navegacao.Rotas
 import com.exemplo.tarefasapp.ui.theme.TarefasAppTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
+// As cores sao guardadas no banco como Long (ARGB), ja que o Room nao salva Color
 private val coresDisponiveis = listOf(
-    Color(0xFF6750A4),
-    Color(0xFF4CAF50),
-    Color(0xFFEF6C00),
-    Color(0xFFD32F2F),
-    Color(0xFF0288D1)
+    0xFF6750A4,
+    0xFF4CAF50,
+    0xFFEF6C00,
+    0xFFD32F2F,
+    0xFF0288D1
 )
 
 @Composable
 fun ListaCategoriasScreen(navController: NavController) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getInstance(context) }
+
+    var categorias by remember { mutableStateOf(listOf<Categoria>()) }
+    var tarefas by remember { mutableStateOf(listOf<Tarefa>()) }
+
+    suspend fun carregar() {
+        try {
+            categorias = db.categoriaDao().buscarTodos()
+            tarefas = db.tarefaDao().buscarTodos()
+        } catch (e: Exception) {
+            Log.e("ListaCategorias", "Erro ao buscar dados do banco", e)
+        }
+    }
+
+    // Busca no banco assim que a tela abre
+    LaunchedEffect(Unit) {
+        carregar()
+    }
+
     Scaffold(
         bottomBar = { BottomBar(navController, Rotas.LISTA_CATEGORIAS) }
     ) { innerPadding ->
@@ -71,15 +99,37 @@ fun ListaCategoriasScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            FormularioNovaCategoria()
+            FormularioNovaCategoria(
+                onAdicionar = { novaCategoria ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            db.categoriaDao().inserir(novaCategoria)
+                            carregar()
+                        } catch (e: Exception) {
+                            Log.e("ListaCategorias", "Erro ao inserir categoria", e)
+                        }
+                    }
+                }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyColumn {
-                items(AppDados.categorias) { categoria ->
+                items(categorias) { categoria ->
                     CardCategoria(
                         categoria = categoria,
-                        onClickCard = { navController.navigate(Rotas.detalheCategoria(categoria.id)) }
+                        quantidadeTarefas = tarefas.count { it.categoriaId == categoria.id },
+                        onClickCard = { navController.navigate(Rotas.detalheCategoria(categoria.id)) },
+                        onRemover = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    db.categoriaDao().deletar(categoria)
+                                    carregar()
+                                } catch (e: Exception) {
+                                    Log.e("ListaCategorias", "Erro ao deletar categoria", e)
+                                }
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -89,7 +139,7 @@ fun ListaCategoriasScreen(navController: NavController) {
 }
 
 @Composable
-private fun FormularioNovaCategoria() {
+private fun FormularioNovaCategoria(onAdicionar: (Categoria) -> Unit) {
     var nome by remember { mutableStateOf("") }
     var corSelecionada by remember { mutableStateOf(coresDisponiveis.first()) }
 
@@ -99,7 +149,7 @@ private fun FormularioNovaCategoria() {
                 modifier = Modifier
                     .size(32.dp),
                 shape = CircleShape,
-                color = cor,
+                color = Color(cor),
                 onClick = { corSelecionada = cor },
                 border = if (corSelecionada == cor) {
                     BorderStroke(2.dp, Color.Black)
@@ -122,13 +172,7 @@ private fun FormularioNovaCategoria() {
         Spacer(modifier = Modifier.width(8.dp))
         Button(onClick = {
             if (nome.isNotBlank()) {
-                AppDados.categorias.add(
-                    Categoria(
-                        id = AppDados.proximoIdCategoria(),
-                        nome = nome,
-                        cor = corSelecionada
-                    )
-                )
+                onAdicionar(Categoria(nome = nome, cor = corSelecionada))
                 nome = ""
             }
         }) {
@@ -138,7 +182,12 @@ private fun FormularioNovaCategoria() {
 }
 
 @Composable
-private fun CardCategoria(categoria: Categoria, onClickCard: () -> Unit) {
+private fun CardCategoria(
+    categoria: Categoria,
+    quantidadeTarefas: Int,
+    onClickCard: () -> Unit,
+    onRemover: () -> Unit
+) {
     Card(
         onClick = onClickCard,
         modifier = Modifier.fillMaxWidth()
@@ -150,19 +199,18 @@ private fun CardCategoria(categoria: Categoria, onClickCard: () -> Unit) {
             Surface(
                 modifier = Modifier.size(24.dp),
                 shape = CircleShape,
-                color = categoria.cor
+                color = Color(categoria.cor)
             ) {}
 
             Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(text = categoria.nome)
-                val quantidade = AppDados.tarefasDaCategoria(categoria.id).size
                 Text(
-                    text = "$quantidade tarefa(s)",
+                    text = "$quantidadeTarefas tarefa(s)",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            IconButton(onClick = { AppDados.categorias.remove(categoria) }) {
+            IconButton(onClick = onRemover) {
                 Icon(Icons.Default.Delete, contentDescription = "Remover categoria")
             }
         }
