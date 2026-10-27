@@ -1,54 +1,55 @@
-# Documentação do processo, Trabalho 2 (MAF)
+# Documentação do processo, Trabalho 3 (parte 3 de 4 da A2, Room)
 
-Trabalho feito individualmente, por um único integrante do trio.
+## Como estava o projeto no Trabalho 2 e o que mudou
 
-## Como estava no Trabalho 1 e o que mudou
+No Trabalho 2 o app já tinha as 7 telas, o NavHost, a barra inferior e as duas listas (tarefas e categorias) com adicionar e remover. O problema era que tudo ficava num objeto `AppDados`, com `mutableStateListOf`, então ao fechar o app os dados voltavam para os de exemplo.
 
-No Trabalho 1 eu tinha as telas estáticas, feitas com Row, Column, Box e Scaffold. Os botões existiam e estavam estilizados, mas não trocavam de tela, e os dados ficavam fixos no próprio código.
+Para o Trabalho 3 as telas e o fluxo de navegação continuaram os mesmos. O que mudou foi de onde vêm os dados:
 
-Para o Trabalho 2 eu precisei transformar isso num app de verdade. Como o projeto antigo não estava mais disponível para mim (perdi o contexto ao mudar de turma), refiz o projeto do zero. As telas de Perfil e Sobre são a evolução das telas do Trabalho 1, agora navegáveis. A partir delas eu construí o restante do MAF: Início, as duas listas e os dois detalhes, todas conectadas por um NavHost central.
+- O objeto `AppDados` foi removido.
+- As data classes `Tarefa` e `Categoria` viraram `@Entity`.
+- Foram criados dois DAOs e a classe `AppDatabase`.
+- Cada tela passou a buscar no banco quando abre, e cada ação (adicionar, concluir, editar, remover) grava no banco.
+- Como o enunciado pede atualizar de verdade, os dois detalhes ganharam um pequeno formulário de edição (título e descrição na tarefa, nome na categoria).
 
-A principal mudança técnica é que agora os dados (tarefas e categorias) vivem numa lista reativa (`mutableStateListOf`) dentro de um objeto compartilhado, `AppDados`, em vez de ficarem presos dentro de cada tela. Isso foi necessário porque uma tela, como o detalhe de uma categoria, precisa enxergar as tarefas que foram criadas em outra tela.
+## Entities, DAOs e Database
 
-## Por que essas telas
+**Entities**
 
-O tema escolhido foi um organizador de tarefas separadas por categoria, parecido com o exemplo de lista de tarefas visto em aula, só que com duas listas em vez de uma.
+- `Tarefa` (tabela `tarefas`): `id`, `titulo`, `descricao`, `categoriaId`, `concluida`, `prazoDias`. São os mesmos campos do Trabalho 2, porque as telas já usavam todos eles.
+- `Categoria` (tabela `categorias`): `id`, `nome`, `cor`. A cor era um `Color` do Compose, que o Room não sabe salvar, então passou a ser um `Long` (valor ARGB, como `0xFF6750A4`). Nas telas converto de volta com `Color(categoria.cor)`.
+- Os dois `id` são `Int` com `@PrimaryKey(autoGenerate = true)` e valor padrão `0`, então o Room gera o id sozinho na inserção (não precisa mais do `proximoIdTarefa()` do Trabalho 2).
 
-- Início: dá um panorama rápido assim que o app abre, mostrando quantas tarefas estão pendentes sem precisar entrar em nenhuma lista.
-- Minhas Tarefas e Minhas Categorias: são o núcleo do trabalho, as duas listas pedidas no enunciado, cada uma com seu próprio tipo de dado.
-- Detalhe da Tarefa e Detalhe da Categoria: mostram a informação específica de cada item, sem deixar a tela de lista cheia demais.
-- Perfil e Sobre o App: são as telas que vieram do Trabalho 1, agora ligadas na navegação.
+**DAOs**
 
-## Decisões de organização do código
+Cada DAO tem os 4 métodos básicos (`inserir`, `buscarTodos`, `atualizar`, `deletar`), todos `suspend`.
 
-Separei o projeto em pacotes por responsabilidade: `dados` (as data classes e o `AppDados`), `navegacao` (o objeto `Rotas` e o `AppNavigation`, com o NavHost), `telas` (uma tela por arquivo) e `componentes` (a barra inferior, usada em quatro telas).
+**Database**
 
-Escolhi guardar as duas listas num objeto (`AppDados`) em vez de deixar cada tela com seu próprio estado. Assim consigo passar dado de verdade entre telas usando só o que foi visto em aula, sem ViewModel nem banco de dados. As rotas de detalhe recebem o id como parte da rota (`detalhe_tarefa/{tarefaId}`), do mesmo jeito que aparece nos slides de Navigation Compose. A tela de detalhe pega o id, converte para número e busca o item certo no `AppDados`.
+`AppDatabase` reúne as duas entities (`version = 1`) e expõe os dois DAOs. Usei o padrão Singleton visto em aula (`companion object` com `@Volatile` e `synchronized`). Também adicionei um `Callback` com `onCreate`, que roda só na primeira vez que o banco é criado e insere as categorias e tarefas de exemplo, para o app não abrir vazio.
 
-Também decidi que cada tela monta o seu próprio `Scaffold`. As telas principais recebem a barra inferior e as de detalhe recebem a TopAppBar com voltar. Assim não precisei de lógica extra para esconder a barra conforme a rota atual.
+## Decisões sobre as queries do DAO
 
-## A complexidade extra no Detalhe
+Além dos 4 métodos básicos, acrescentei:
 
-O enunciado pedia que pelo menos uma tela de detalhe fizesse mais do que só reexibir os campos. Eu coloquei essa complexidade nas duas:
+- `buscarPorId(id)` nos dois DAOs: usado nas telas de detalhe, que recebem só o id pela navegação e buscam o item direto no banco (em vez de receber o objeto pronto).
+- `TarefaDao.buscarPorCategoria(categoriaId)`: usado no Detalhe da Categoria, que antes filtrava a lista em memória. Agora o filtro é feito pelo banco.
 
-- No Detalhe da Tarefa, busco a categoria vinculada na lista de categorias (combinando as duas listas) e calculo um texto com quantos dias faltam para o prazo.
-- No Detalhe da Categoria, filtro as tarefas pelo id da categoria e calculo quantas já estão concluídas, mostrando a conta pronta na tela.
+`buscarPorId` devolve `Tarefa?` / `Categoria?`, porque o item pode não existir mais (por exemplo, se foi removido). As telas de detalhe mostram "não existe mais" nesse caso.
 
-Escolhi essas duas porque uma tarefa sem a categoria dela fica incompleta, e uma categoria sem as tarefas dela também.
+## Dificuldades ao migrar do mutableStateListOf para o Room
 
-## Dificuldades
-
-- Primeira build demorou muito. O Gradle precisou baixar o Build-Tools e a Platform 34 que não estavam instalados, e a build ficou vários minutos sem mostrar nada. Foi só esperar terminar.
-- O Android Studio mostrava "Gradle sync needed, Unable to determine project Android Gradle Plugin (AGP) version". Resolvi clicando em Sync project e depois fazendo o Build pelo menu. Em alguns casos o build aparecia como cancelado logo no início, e o problema só sumiu depois que sincronizei de novo e invalidei o cache da IDE.
-- O Android Studio avisou que o `TopAppBar` era experimental. Resolvi colocando `@OptIn(ExperimentalMaterial3Api::class)` nas telas que usam esse componente.
-- O preview não aparecia de primeira. Ele só funcionou depois que o projeto foi compilado pela própria IDE (Build > Build Project).
+- `Color` não é salvável no Room. Resolvi guardando a cor como `Long` e convertendo na hora de desenhar.
+- No Trabalho 2 a lista era um estado do Compose e a tela atualizava sozinha ao adicionar ou remover. Com o Room, as funções do DAO só devolvem uma lista pronta, então depois de cada inserir, atualizar ou deletar eu chamo a busca de novo para atualizar o estado da tela.
+- O enunciado pede que as chamadas ao banco não travem a interface, então as escritas (inserir, atualizar, deletar) ficam dentro de `CoroutineScope(Dispatchers.IO).launch`, e a busca inicial fica no `LaunchedEffect(Unit)`.
+- Os ids deixaram de ser calculados por mim. Os dados de exemplo inseridos no `onCreate` usam ids 1, 2 e 3 para as categorias, e as tarefas apontam para esses ids.
+- Remover uma categoria não remove as tarefas dela do banco (não coloquei chave estrangeira, porque o enunciado não pede). Essas tarefas continuam na lista de tarefas, só sem categoria para mostrar.
+- O KSP precisa ser compatível com a versão do Kotlin (1.9.24), por isso o plugin está na versão `1.9.24-1.0.20`, declarado antes da dependência `room-compiler`.
 
 ## Prints e vídeo do app funcionando
 
-Vídeo mostrando o app rodando no Pixel 6 (adicionar e remover tarefa e categoria, abrir os detalhes, navegar pela barra inferior e pelo Perfil):
+Vídeo do app rodando, mostrando o teste de persistência (adicionar um item, fechar o app, reabrir e o item continuar lá): https://www.loom.com/share/1e7146f5baf047f8b3a052611f819053
 
-https://www.loom.com/share/99c151dff67944a1a5f5bad82f142e53
+## Dificuldades do trio
 
-Vídeo mostrando a remoção de uma categoria:
-
-https://www.loom.com/share/5b8883bbab71474f9828f850a1183516
+(Preencher com as dificuldades reais de cada integrante e como foram resolvidas.)
