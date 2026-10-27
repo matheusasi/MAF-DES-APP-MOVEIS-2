@@ -5,16 +5,18 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+// imports
 
 @Database(entities = [Tarefa::class, Categoria::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun tarefaDao(): TarefaDao
     abstract fun categoriaDao(): CategoriaDao
+// declara o banco
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+//singleton - volatile para garantir que não venha valor antigo na thread(vem valor na hora)
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -27,10 +29,10 @@ abstract class AppDatabase : RoomDatabase() {
                 instancia
             }
         }
-    }
+    }  // pega ou cria o banco
 }
 
-// Roda so na primeira vez que o banco e criado, para o app nao abrir vazio
+
 private object DadosIniciais : RoomDatabase.Callback() {
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
@@ -43,3 +45,5 @@ private object DadosIniciais : RoomDatabase.Callback() {
         db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Ir na academia', 'Treino de pernas', 3, 0, 1)")
     }
 }
+// Roda so na primeira vez que o banco e criado, para o app nao abrir vazio
+//mocks!
