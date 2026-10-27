@@ -38,7 +38,7 @@ private object DadosIniciais : RoomDatabase.Callback() {
         db.execSQL("INSERT INTO categorias (nome, cor) VALUES ('Casa', ${0xFF4CAF50})")
         db.execSQL("INSERT INTO categorias (nome, cor) VALUES ('Pessoal', ${0xFFEF6C00})")
         db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Entregar trabalho de DAM', 'Terminar o app de tarefas e categorias', 1, 0, 3)")
-        db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Estudar para a prova', 'Revisar o conteudo de Room', 1, 0, 7)")
+        db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Estudar para a prova', 'Revisar o conteúdo de Room', 1, 0, 7)")
         db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Lavar roupa', 'Colocar a maquina para lavar antes do meio dia', 2, 1, 0)")
         db.execSQL("INSERT INTO tarefas (titulo, descricao, categoriaId, concluida, prazoDias) VALUES ('Ir na academia', 'Treino de pernas', 3, 0, 1)")
     }

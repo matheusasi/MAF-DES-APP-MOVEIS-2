@@ -17,10 +17,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -58,6 +61,8 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
     var carregando by remember { mutableStateOf(true) }
     var tarefa by remember { mutableStateOf<Tarefa?>(null) }
     var categoria by remember { mutableStateOf<Categoria?>(null) }
+    var todasCategorias by remember { mutableStateOf<List<Categoria>>(emptyList()) }
+    var menuAberto by remember { mutableStateOf(false) }
 
     // Campos do formulario de edicao
     var titulo by remember { mutableStateOf("") }
@@ -69,6 +74,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
             val encontrada = db.tarefaDao().buscarPorId(tarefaId)
             tarefa = encontrada
             categoria = encontrada?.let { db.categoriaDao().buscarPorId(it.categoriaId) }
+            todasCategorias = db.categoriaDao().buscarTodos()
             if (encontrada != null) {
                 titulo = encontrada.titulo
                 descricao = encontrada.descricao
@@ -106,7 +112,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
                     .padding(16.dp)
             ) {
                 if (!carregando) {
-                    Text("Essa tarefa nao existe mais")
+                    Text("Essa tarefa não existe mais")
                 }
             }
             return@Scaffold
@@ -145,7 +151,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
                         }
                     }
                 )
-                Text(text = if (tarefaAtual.concluida) "Concluida" else "Pendente")
+                Text(text = if (tarefaAtual.concluida) "Concluída" else "Pendente")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -169,11 +175,35 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(onClick = { menuAberto = true }) {
+                Text("Alterar categoria")
+            }
+            DropdownMenu(expanded = menuAberto, onDismissRequest = { menuAberto = false }) {
+                todasCategorias.forEach { opcao ->
+                    DropdownMenuItem(
+                        text = { Text(opcao.nome) },
+                        onClick = {
+                            menuAberto = false
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    db.tarefaDao().atualizar(tarefaAtual.copy(categoriaId = opcao.id))
+                                    carregar()
+                                } catch (e: Exception) {
+                                    Log.e("DetalheTarefa", "Erro ao trocar categoria", e)
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             val textoPrazo = when {
-                tarefaAtual.concluida -> "Essa tarefa ja foi concluida"
-                tarefaAtual.prazoDias <= 0 -> "O prazo dessa tarefa e hoje"
+                tarefaAtual.concluida -> "Essa tarefa já foi concluída"
+                tarefaAtual.prazoDias <= 0 -> "O prazo dessa tarefa é hoje"
                 tarefaAtual.prazoDias == 1 -> "Falta 1 dia para o prazo"
                 else -> "Faltam ${tarefaAtual.prazoDias} dias para o prazo"
             }
@@ -192,7 +222,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
-                label = { Text("Titulo") },
+                label = { Text("Título") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -201,7 +231,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
             OutlinedTextField(
                 value = descricao,
                 onValueChange = { descricao = it },
-                label = { Text("Descricao") },
+                label = { Text("Descrição") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -221,7 +251,7 @@ fun DetalheTarefaScreen(navController: NavController, tarefaId: Int) {
                     }
                 }
             }) {
-                Text("Salvar alteracoes")
+                Text("Salvar alterações")
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.exemplo.tarefasapp.telas
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,7 +33,9 @@ import com.exemplo.tarefasapp.ui.theme.TarefasAppTheme
 @Composable
 fun PerfilScreen(navController: NavController) {
     val context = LocalContext.current
-    var nome by remember { mutableStateOf("Aluno de DAM") }
+    // O nome fica guardado em SharedPreferences para sobreviver ao fechar o app
+    val prefs = remember { context.getSharedPreferences("perfil", Context.MODE_PRIVATE) }
+    var nome by remember { mutableStateOf(prefs.getString("nome", "Aluno de DAM") ?: "Aluno de DAM") }
 
     Scaffold(
         bottomBar = { BottomBar(navController, Rotas.PERFIL) }
@@ -61,6 +64,7 @@ fun PerfilScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(onClick = {
+                prefs.edit().putString("nome", nome).apply()
                 Toast.makeText(context, "Perfil atualizado", Toast.LENGTH_SHORT).show()
             }) {
                 Text("Salvar")

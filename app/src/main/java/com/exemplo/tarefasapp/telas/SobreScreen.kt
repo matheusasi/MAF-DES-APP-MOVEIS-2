@@ -53,12 +53,12 @@ fun SobreScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Esse app foi feito para o Trabalho 2 de Desenvolvimento de Aplicativos Moveis. A ideia e organizar tarefas do dia a dia separadas por categorias."
+                text = "Esse app foi feito para o Trabalho 2 de Desenvolvimento de Aplicativos Móveis. A ideia é organizar tarefas do dia a dia separadas por categorias."
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = "Versao 1.0")
+            Text(text = "Versão 1.0")
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -57,12 +57,12 @@ fun HomeScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Ola!",
+                text = "Olá!",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Isso e um resumo do seu organizador de tarefas",
+                text = "Isso é um resumo do seu organizador de tarefas",
                 style = MaterialTheme.typography.bodyMedium
             )
 

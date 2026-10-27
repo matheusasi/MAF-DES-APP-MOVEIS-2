@@ -19,8 +19,8 @@ fun BottomBar(navController: NavController, rotaAtual: String) {
         NavigationBarItem(
             selected = rotaAtual == Rotas.HOME,
             onClick = { navController.navigate(Rotas.HOME) },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-            label = { Text("Inicio") }
+            icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+            label = { Text("Início") }
         )
         NavigationBarItem(
             selected = rotaAtual == Rotas.LISTA_TAREFAS,

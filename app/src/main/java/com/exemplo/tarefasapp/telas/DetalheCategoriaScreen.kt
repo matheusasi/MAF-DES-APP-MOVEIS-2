@@ -101,7 +101,7 @@ fun DetalheCategoriaScreen(navController: NavController, categoriaId: Int) {
                     .padding(16.dp)
             ) {
                 if (!carregando) {
-                    Text("Essa categoria nao existe mais")
+                    Text("Essa categoria não existe mais")
                 }
             }
             return@Scaffold
@@ -131,7 +131,7 @@ fun DetalheCategoriaScreen(navController: NavController, categoriaId: Int) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "$quantidadeConcluidas de ${tarefasDaCategoria.size} tarefas concluidas")
+            Text(text = "$quantidadeConcluidas de ${tarefasDaCategoria.size} tarefas concluídas")
 
             Spacer(modifier = Modifier.height(16.dp))
 
