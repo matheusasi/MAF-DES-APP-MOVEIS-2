@@ -1,10 +1,11 @@
-package com.exemplo.tarefasapp.dados
+package com.exemplo.tarefasapp.data
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoriaDao {
@@ -13,10 +14,7 @@ interface CategoriaDao {
     suspend fun inserir(categoria: Categoria)
 
     @Query("SELECT * FROM categorias")
-    suspend fun buscarTodos(): List<Categoria>
-
-    @Query("SELECT * FROM categorias WHERE id = :id")
-    suspend fun buscarPorId(id: Int): Categoria?
+    fun buscarTodos(): Flow<List<Categoria>>
 
     @Update
     suspend fun atualizar(categoria: Categoria)

@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.dados
+package com.exemplo.tarefasapp.data
 
 import android.content.Context
 import androidx.room.Database

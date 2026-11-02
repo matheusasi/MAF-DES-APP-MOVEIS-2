@@ -1,10 +1,11 @@
-package com.exemplo.tarefasapp.dados
+package com.exemplo.tarefasapp.data
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TarefaDao {
@@ -12,14 +13,9 @@ interface TarefaDao {
     @Insert
     suspend fun inserir(tarefa: Tarefa)
 
+    // Flow nao precisa de suspend e o Room emite a lista de novo sempre que a tabela muda
     @Query("SELECT * FROM tarefas")
-    suspend fun buscarTodos(): List<Tarefa>
-
-    @Query("SELECT * FROM tarefas WHERE id = :id")
-    suspend fun buscarPorId(id: Int): Tarefa?
-
-    @Query("SELECT * FROM tarefas WHERE categoriaId = :categoriaId")
-    suspend fun buscarPorCategoria(categoriaId: Int): List<Tarefa>
+    fun buscarTodos(): Flow<List<Tarefa>>
 
     @Update
     suspend fun atualizar(tarefa: Tarefa)

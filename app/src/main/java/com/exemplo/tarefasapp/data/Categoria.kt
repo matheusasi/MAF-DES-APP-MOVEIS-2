@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.dados
+package com.exemplo.tarefasapp.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
