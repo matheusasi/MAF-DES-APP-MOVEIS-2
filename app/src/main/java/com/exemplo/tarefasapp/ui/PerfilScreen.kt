@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.telas
+package com.exemplo.tarefasapp.ui
 
 import android.content.Context
 import android.widget.Toast
@@ -26,8 +26,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.exemplo.tarefasapp.componentes.BottomBar
-import com.exemplo.tarefasapp.navegacao.Rotas
+import com.exemplo.tarefasapp.ui.componentes.BottomBar
+import com.exemplo.tarefasapp.ui.navegacao.Rotas
 import com.exemplo.tarefasapp.ui.theme.TarefasAppTheme
 
 @Composable

@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.telas
+package com.exemplo.tarefasapp.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

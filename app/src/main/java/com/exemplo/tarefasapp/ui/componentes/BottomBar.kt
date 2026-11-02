@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.componentes
+package com.exemplo.tarefasapp.ui.componentes
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
@@ -11,7 +11,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
-import com.exemplo.tarefasapp.navegacao.Rotas
+import com.exemplo.tarefasapp.ui.navegacao.Rotas
 
 @Composable
 fun BottomBar(navController: NavController, rotaAtual: String) {

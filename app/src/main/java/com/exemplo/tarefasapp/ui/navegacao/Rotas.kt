@@ -1,4 +1,4 @@
-package com.exemplo.tarefasapp.navegacao
+package com.exemplo.tarefasapp.ui.navegacao
 
 object Rotas {
     const val HOME = "home"
